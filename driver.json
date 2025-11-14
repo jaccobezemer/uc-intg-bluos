@@ -1,0 +1,43 @@
+{
+  "driver_id": "bluos",
+  "version": "0.1.0",
+  "min_core_api": "0.20.0",
+  "port": 9001,
+  "name": {
+    "en": "BluOS",
+    "nl": "BluOS"
+  },
+  "description": {
+    "en": "Integration for BluOS-enabled devices (NAD, Bluesound, etc.)",
+    "nl": "Integratie voor BluOS apparaten (NAD, Bluesound, etc.)"
+  },
+  "icon": "custom:bluos.png",
+  "developer": {
+    "name": "Jacco Bezemer"
+  },
+  "home_page": "https://github.com/jaccobezemer/uc-intg-bluos",
+  "setup_data_schema": {
+    "title": {
+      "en": "BluOS Setup",
+      "nl": "BluOS Setup"
+    },
+    "settings": [
+      {
+        "id": "info",
+        "label": {
+          "en": "Setup process",
+          "nl": "Configuratie proces"
+        },
+        "field": {
+          "label": {
+            "value": {
+              "en": "The integration will discover your BluOS device on your network.",
+              "nl": "De integratie probeert je BluOS apparaat te vinden in het netwerk."
+            }
+          }
+        }
+      }
+    ]
+  },
+  "release_date": "2025-11-14"
+}
