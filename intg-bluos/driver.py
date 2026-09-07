@@ -61,6 +61,48 @@ def _get_version(driver_json_path: str) -> str:
         return "unknown"
 
 
+def _migrate_legacy_config(config_dir: str, config_manager: BaseConfigManager) -> None:
+    """Import devices from the pre-0.2.5 "devices.json" config format, if present.
+
+    Versions before 0.2.5 stored devices in "devices.json" via a hand-rolled
+    Config class. ucapi_framework's BaseConfigManager looks for "config.json",
+    so without this one-time import an upgrade would silently lose the
+    configured device (and its entity) instead of just renaming it.
+    """
+    legacy_path = os.path.join(config_dir, "devices.json")
+    if not os.path.isfile(legacy_path):
+        return
+
+    if list(config_manager.all()):
+        # Already has devices (either migrated before, or set up fresh under 0.2.5+).
+        return
+
+    try:
+        with open(legacy_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError) as err:
+        _LOG.warning("Could not read legacy config %s: %s", legacy_path, err)
+        return
+
+    migrated = 0
+    for entry in data.get("devices", []):
+        host = entry.get("host")
+        if not host:
+            continue
+        config_manager.add_or_update(
+            BluOSDeviceConfig(
+                identifier=host.replace(".", "_"),
+                name=entry.get("name", "BluOS Player"),
+                host=host,
+                port=entry.get("port", 11000),
+            )
+        )
+        migrated += 1
+
+    if migrated:
+        _LOG.info("Imported %d device(s) from legacy devices.json", migrated)
+
+
 async def main():
     """Start the integration driver."""
     logging.basicConfig(
@@ -84,6 +126,7 @@ async def main():
         remove_handler=driver.on_device_removed,
         config_class=BluOSDeviceConfig,
     )
+    _migrate_legacy_config(config_path, driver.config_manager)
 
     discovery = BluOSDiscovery()
     setup_handler = BluOSSetupFlow.create_handler(driver, discovery=discovery)

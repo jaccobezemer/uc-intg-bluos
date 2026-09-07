@@ -3,7 +3,12 @@ import logging
 from typing import Any
 
 from ucapi import RequestUserInput
-from ucapi_framework import BaseSetupFlow, DiscoveredDevice
+from ucapi_framework import (
+    BaseSetupFlow,
+    DiscoveredDevice,
+    EntityMigrationMapping,
+    MigrationData,
+)
 
 from bluos_client import BluOSClient
 from config import BluOSDeviceConfig
@@ -11,6 +16,12 @@ from config import BluOSDeviceConfig
 _LOG = logging.getLogger(__name__)
 
 DEFAULT_PORT = 11000
+
+# Versions up to and including 0.2.5 used a "bluos_<host>" entity ID (hand-rolled
+# driver). 0.2.5 itself introduced ucapi_framework but its config file mismatch
+# (devices.json vs config.json) meant migration never actually ran for anyone on
+# that release, so 0.2.5 is treated as still needing it. Fixed in 0.2.6.
+_MIGRATION_NEEDED_UP_TO = (0, 2, 5)
 
 
 class BluOSSetupFlow(BaseSetupFlow[BluOSDeviceConfig]):
@@ -83,4 +94,29 @@ class BluOSSetupFlow(BaseSetupFlow[BluOSDeviceConfig]):
             name=name,
             host=host,
             port=port,
+        )
+
+    async def is_migration_required(self, previous_version: str) -> bool:
+        try:
+            parts = tuple(int(p) for p in previous_version.split(".")[:3])
+        except (ValueError, AttributeError, TypeError):
+            # Unknown/unparsable previous version: migrate to be safe rather
+            # than silently orphan existing activity references.
+            return True
+        return parts <= _MIGRATION_NEEDED_UP_TO
+
+    async def get_migration_data(
+        self, previous_version: str, current_version: str
+    ) -> MigrationData:
+        entity_mappings: list[EntityMigrationMapping] = [
+            {
+                "previous_entity_id": f"bluos_{device.identifier}",
+                "new_entity_id": f"media_player.{device.identifier}",
+            }
+            for device in self.config.all()
+        ]
+        return MigrationData(
+            previous_driver_id="bluos",
+            new_driver_id="bluos",
+            entity_mappings=entity_mappings,
         )
