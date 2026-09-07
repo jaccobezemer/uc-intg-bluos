@@ -16,10 +16,10 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
@@ -36,7 +36,7 @@ jobs:
         echo "version=${version}" >> "$GITHUB_OUTPUT"
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
+      uses: docker/setup-qemu-action@v3
 
     - name: Build executable in Docker
       run: |
@@ -64,22 +64,10 @@ jobs:
         tar -czvf bluos-v${{ steps.get_version.outputs.version }}.tar.gz -C artifacts .
 
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.get_version.outputs.version }}
-        release_name: Release v${{ steps.get_version.outputs.version }}
+        name: Release v${{ steps.get_version.outputs.version }}
         draft: false
         prerelease: false
-
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./bluos-v${{ steps.get_version.outputs.version }}.tar.gz
-        asset_name: bluos-v${{ steps.get_version.outputs.version }}.tar.gz
-        asset_content_type: application/gzip
+        files: ./bluos-v${{ steps.get_version.outputs.version }}.tar.gz
