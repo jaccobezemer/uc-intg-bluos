@@ -1,7 +1,7 @@
 {
   "driver_id": "bluos",
-  "version": "0.2.4",
-  "min_core_api": "0.20.0",
+  "version": "0.2.5",
+  "min_core_api": "0.22.0",
   "port": 9001,
   "name": {
     "en": "BluOS",

@@ -49,7 +49,7 @@ jobs:
           bash -c \
           "cd /workspace && \
             python -m pip install -r requirements.txt && \
-            pyinstaller --clean --onedir --name intg-bluos --paths intg-bluos --collect-all zeroconf intg-bluos/driver.py"
+            pyinstaller --clean --onedir --name intg-bluos --paths intg-bluos --collect-all zeroconf --collect-all ucapi --collect-all ucapi_framework intg-bluos/driver.py"
 
     - name: Prepare artifacts
       run: |

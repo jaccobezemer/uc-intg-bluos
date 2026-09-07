@@ -19,18 +19,10 @@ This integration allows you to control BluOS-enabled devices (like NAD M33, Blue
 
 ## Setup Process
 
-The setup is a two-step process:
-
-### Step 1: Initial Setup (during installation)
-
-1. After uploading the integration file, the setup process will start automatically.
-2. You don't need to enter any information here. Just click **"Done"** to complete the installation.
-
-### Step 2: Discover and Add Devices
-
-1. Go to the integration's card in the configurator and click **"Setup"** again.
-2. The integration will now scan your network for available BluOS devices. This may take a few seconds.
-3. Once discovery is complete, the integration will automatically add all found devices as entities.
+1. After uploading the integration file, click **"Setup"** on the integration's card.
+2. The integration scans your network for BluOS devices (this may take a few seconds).
+3. Select your device from the list, or choose **"Setup Manually"** to enter its IP address directly.
+4. Click **"Done"** to finish. Repeat the process to add additional devices.
 
 ## BluOS API Protocol
 
