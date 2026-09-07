@@ -1,6 +1,6 @@
 {
   "driver_id": "bluos",
-  "version": "0.1.0",
+  "version": "0.2.4",
   "min_core_api": "0.20.0",
   "port": 9001,
   "name": {
@@ -13,7 +13,9 @@
   },
   "icon": "custom:bluos.png",
   "developer": {
-    "name": "Jacco Bezemer"
+    "name": "Jacco Bezemer",
+    "email": "jacco.bezemer@gmail.com",    
+    "url": "https://github.com/jaccobezemer"    
   },
   "home_page": "https://github.com/jaccobezemer/uc-intg-bluos",
   "setup_data_schema": {
