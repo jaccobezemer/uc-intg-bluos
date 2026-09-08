@@ -29,6 +29,16 @@ class BluOSDriver(BaseIntegrationDriver[BluOSDevice, BluOSDeviceConfig]):
             require_connection_before_registry=True,
         )
 
+    def device_from_entity_id(self, entity_id: str) -> str | None:
+        # The Remote may still hold a stale entity_id from before 0.2.5
+        # (e.g. "bluos_<host>", no separator). Returning None here lets the
+        # framework's own "unknown entity" handling skip it gracefully
+        # instead of raising and crashing the subscribe-entities callback.
+        if self.entity_id_separator not in entity_id:
+            _LOG.warning("Ignoring unrecognized (legacy?) entity_id: %s", entity_id)
+            return None
+        return super().device_from_entity_id(entity_id)
+
 
 def _get_driver_path() -> str:
     """Get the path to driver.json, handling both source and PyInstaller bundles."""
@@ -61,20 +71,24 @@ def _get_version(driver_json_path: str) -> str:
         return "unknown"
 
 
-def _migrate_legacy_config(config_dir: str, config_manager: BaseConfigManager) -> None:
-    """Import devices from the pre-0.2.5 "devices.json" config format, if present.
+def _migrate_legacy_config(config_dir: str) -> None:
+    """Convert the pre-0.2.5 "devices.json" config format to "config.json".
 
     Versions before 0.2.5 stored devices in "devices.json" via a hand-rolled
     Config class. ucapi_framework's BaseConfigManager looks for "config.json",
-    so without this one-time import an upgrade would silently lose the
+    so without this one-time conversion an upgrade would silently lose the
     configured device (and its entity) instead of just renaming it.
+
+    This writes the new file directly, before BaseConfigManager is constructed,
+    so the device is picked up by its normal load() and goes through the
+    normal single registration path in register_all_device_instances() -
+    calling config_manager.add_or_update() here instead would trigger
+    on_device_added() immediately (a second, racing registration).
     """
     legacy_path = os.path.join(config_dir, "devices.json")
-    if not os.path.isfile(legacy_path):
-        return
+    new_path = os.path.join(config_dir, "config.json")
 
-    if list(config_manager.all()):
-        # Already has devices (either migrated before, or set up fresh under 0.2.5+).
+    if not os.path.isfile(legacy_path) or os.path.isfile(new_path):
         return
 
     try:
@@ -84,23 +98,30 @@ def _migrate_legacy_config(config_dir: str, config_manager: BaseConfigManager) -
         _LOG.warning("Could not read legacy config %s: %s", legacy_path, err)
         return
 
-    migrated = 0
+    devices = []
     for entry in data.get("devices", []):
         host = entry.get("host")
         if not host:
             continue
-        config_manager.add_or_update(
-            BluOSDeviceConfig(
-                identifier=host.replace(".", "_"),
-                name=entry.get("name", "BluOS Player"),
-                host=host,
-                port=entry.get("port", 11000),
-            )
+        devices.append(
+            {
+                "identifier": host.replace(".", "_"),
+                "name": entry.get("name", "BluOS Player"),
+                "host": host,
+                "port": entry.get("port", 11000),
+            }
         )
-        migrated += 1
 
-    if migrated:
-        _LOG.info("Imported %d device(s) from legacy devices.json", migrated)
+    if not devices:
+        return
+
+    try:
+        os.makedirs(config_dir, exist_ok=True)
+        with open(new_path, "w", encoding="utf-8") as f:
+            json.dump(devices, f, ensure_ascii=False)
+        _LOG.info("Migrated %d device(s) from legacy devices.json to config.json", len(devices))
+    except OSError as err:
+        _LOG.warning("Could not write migrated config %s: %s", new_path, err)
 
 
 async def main():
@@ -120,13 +141,13 @@ async def main():
     driver = BluOSDriver()
 
     config_path = get_config_path(driver.api.config_dir_path or "")
+    _migrate_legacy_config(config_path)
     driver.config_manager = BaseConfigManager(
         config_path,
         add_handler=driver.on_device_added,
         remove_handler=driver.on_device_removed,
         config_class=BluOSDeviceConfig,
     )
-    _migrate_legacy_config(config_path, driver.config_manager)
 
     discovery = BluOSDiscovery()
     setup_handler = BluOSSetupFlow.create_handler(driver, discovery=discovery)
