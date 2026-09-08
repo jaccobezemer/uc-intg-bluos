@@ -48,7 +48,10 @@ class BluOSMediaPlayer(MediaPlayerEntity):
 
     def __init__(self, device_config: BluOSDeviceConfig, device: BluOSDevice) -> None:
         self._device = device
-        entity_id = f"media_player.{device_config.identifier}"
+        # Keep the pre-0.2.5 entity ID scheme ("bluos_<host>", no dot) so
+        # upgrading never breaks existing activity references - see
+        # BluOSDriver.device_from_entity_id() for the matching parse side.
+        entity_id = f"bluos_{device_config.identifier}"
         super().__init__(
             entity_id,
             device_config.name,

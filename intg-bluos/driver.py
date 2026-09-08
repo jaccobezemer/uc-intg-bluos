@@ -17,6 +17,10 @@ from setup_flow import BluOSSetupFlow
 
 _LOG = logging.getLogger(__name__)
 
+# Entity IDs use the same "bluos_<device_id>" scheme since 0.1.0 (no "." separator).
+# Kept unchanged across every version so upgrading never breaks activity references.
+_ENTITY_ID_PREFIX = "bluos_"
+
 
 class BluOSDriver(BaseIntegrationDriver[BluOSDevice, BluOSDeviceConfig]):
     """BluOS integration driver."""
@@ -29,15 +33,14 @@ class BluOSDriver(BaseIntegrationDriver[BluOSDevice, BluOSDeviceConfig]):
             require_connection_before_registry=True,
         )
 
+    def entity_type_from_entity_id(self, entity_id: str) -> str | None:
+        # Every entity this driver exposes is a media player.
+        return "media_player"
+
     def device_from_entity_id(self, entity_id: str) -> str | None:
-        # The Remote may still hold a stale entity_id from before 0.2.5
-        # (e.g. "bluos_<host>", no separator). Returning None here lets the
-        # framework's own "unknown entity" handling skip it gracefully
-        # instead of raising and crashing the subscribe-entities callback.
-        if self.entity_id_separator not in entity_id:
-            _LOG.warning("Ignoring unrecognized (legacy?) entity_id: %s", entity_id)
-            return None
-        return super().device_from_entity_id(entity_id)
+        if entity_id.startswith(_ENTITY_ID_PREFIX):
+            return entity_id[len(_ENTITY_ID_PREFIX):]
+        return None
 
 
 def _get_driver_path() -> str:
